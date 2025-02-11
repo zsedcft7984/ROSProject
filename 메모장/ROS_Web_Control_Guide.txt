@@ -1,0 +1,99 @@
+ROS 웹 기반 제어 관련 질문 정리
+
+1. ROS에서 정보를 구독하는 코드 (roslibjs 사용)
+-------------------------------------------------
+Q: 기존 코드에서 ROS 토픽을 구독하여 데이터를 가져오고 있다. 
+   만약 ROS에 정보를 보내는 코드 (명령 전송)를 추가하려면 어떻게 구성해야 하는가?
+
+A: ROS에 정보를 보내기 위해서는 **ROS Publisher**를 사용해야 한다.
+   - 기존 코드에서는 `ROSLIB.Topic.subscribe()`를 사용하여 데이터를 읽고 있음.
+   - ROS에 명령을 보내려면 `ROSLIB.Topic.publish()`를 사용해야 함.
+   - HTML 버튼을 추가하여 클릭 시 특정 명령을 ROS로 전송하는 방식이 가능.
+
+-------------------------------------------------
+2. 명령 전송 기능 추가 (버튼 클릭 시 ROS 명령 보내기)
+-------------------------------------------------
+Q: ROS 명령을 보내기 위해 버튼을 추가하고, 클릭 시 동작하도록 코드를 수정해 달라.
+
+A: 아래와 같은 코드로 버튼을 추가하고 이벤트 리스너를 설정할 수 있다.
+
+   1) HTML 버튼 추가:
+   ```html
+   <button id="moveForward">Move Forward</button>
+   ```
+
+   2) JavaScript에서 버튼 이벤트 처리:
+   ```javascript
+   const moveTopic = new ROSLIB.Topic({
+       ros: ros,
+       name: '/cmd_vel',  // 명령을 보낼 토픽명
+       messageType: 'geometry_msgs/Twist'
+   });
+
+   document.getElementById('moveForward').addEventListener('click', function() {
+       let twist = new ROSLIB.Message({
+           linear: { x: 0.5, y: 0, z: 0 },
+           angular: { x: 0, y: 0, z: 0 }
+       });
+       moveTopic.publish(twist);
+       console.log("Move Forward command sent!");
+   });
+   ```
+
+-------------------------------------------------
+3. 데이터 수신과 명령 전송을 분리할 필요가 있는가?
+-------------------------------------------------
+Q: 정보를 구독하는 코드와 명령을 보내는 코드를 분리하는 것이 좋은가?
+
+A: **안전성을 위해 분리하는 것이 좋다.**
+   - 구독(subscriber.js): `/voltage` 등의 센서 데이터를 수신.
+   - 발행(publisher.js): `/cmd_vel` 등의 이동 명령을 전송.
+
+   **구독 코드 (subscriber.js)**
+   ```javascript
+   const voltageTopic = new ROSLIB.Topic({
+       ros: ros,
+       name: '/voltage',
+       messageType: 'jetbotmini_msgs/Battery'
+   });
+
+   voltageTopic.subscribe(function(message) {
+       document.getElementById('voltageDisplay').innerText = 'Voltage: ' + message.data;
+   });
+   ```
+
+   **발행 코드 (publisher.js)**
+   ```javascript
+   const moveTopic = new ROSLIB.Topic({
+       ros: ros,
+       name: '/cmd_vel',
+       messageType: 'geometry_msgs/Twist'
+   });
+
+   document.getElementById('moveForward').addEventListener('click', function() {
+       let twist = new ROSLIB.Message({ linear: { x: 0.5, y: 0, z: 0 } });
+       moveTopic.publish(twist);
+   });
+   ```
+
+-------------------------------------------------
+4. script 태그 위치에 따른 차이점
+-------------------------------------------------
+Q: 데이터를 받는 스크립트는 `<head>`에, 명령을 보내는 스크립트는 `<body>`에 배치하는 것이 맞는가?
+
+A: **맞다. 최적의 방식은 아래와 같다.**
+   - **구독 스크립트 (subscriber.js):** `<head>`에 배치 → ROS 연결을 빠르게 설정.
+   - **발행 스크립트 (publisher.js):** `<body>` 끝에 배치 → 버튼 클릭 이벤트 보장.
+
+   **HTML 구조 예시**
+   ```html
+   <head>
+       <script src="subscriber.js"></script> <!-- 데이터 구독 -->
+   </head>
+   <body>
+       <button id="moveForward">Move Forward</button>
+       <script src="publisher.js"></script> <!-- 명령 전송 -->
+   </body>
+   ```
+
+-------------------------------------------------

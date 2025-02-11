@@ -1,0 +1,20 @@
+Ros를 이용한 데이터 송신과 수신:
+일반적으로 Topic과 Survice 가 있는데
+Topic은 실시간 스트리밍 정보를 제공하는데 유리하고 명령을 받아 처리할수 있다.
+Survice는 요청에 대한 처리가 주목적 필요할때만 명령을 내리기에는 유리
+
+따라서 우리가 하려는 프로젝트는 실시간 영상 송출과 영상을 처리해서 명령을 내려야 하는 시스템이므로 Topic을 사용하는것이 좋다.
+
+기본적으로 Ros 시스템으로 Topic을 사용하려면 
+
+- ROS 시스템 업데이트( 필요시 )
+sudo apt update && sudo apt upgrade -y
+
+-ROS 브릿지 설치 ( 처음 사용시 ) 
+sudo apt install ros-${ROS_DISTRO}-rosbridge-server
+
+- ROS 마스터 실행  ( 모든  Ros 시스템 실행전 해줘야됨 )
+roscore
+
+- ROS 브릿지 활성화
+roslaunch rosbridge_server rosbridge_websocket.launch
