@@ -19,19 +19,14 @@
     <!-- 로봇 이동 버튼 -->
     <button id="moveForward">전진</button>
     <button id="stop">정지</button>
-    <button id="lineTracing">라인 트레이싱 시작</button>    
+    <button id="lineTracing">라인 트레이싱 시작</button>
+    <button id="stopLineTracing">라인 트레이싱 중지</button>  <!-- 라인트레이싱 중지 버튼 추가 -->
+
     <!-- 실시간 영상 스트리밍 -->
     <h2>Live Video Stream</h2>
     <img id="videoStream" width="640" height="480" alt="Live Video Stream">
 
     <!-- 명령 전송 (DOM이 로드된 후 실행해야 하므로 body 끝에 배치) -->
     <script src="publisher.js"></script>
-    <script>
-        // config.js에서 정의된 ros_ip 사용하여 영상 스트리밍 주소 설정
-        window.onload = function() {
-            const videoStream = document.getElementById('videoStream');
-            videoStream.src = `http://${window.ros_ip}:8080/stream?topic=/csi_cam_0/image_raw`;
-        };
-    </script>
 </body>
-
+</html>

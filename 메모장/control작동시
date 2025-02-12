@@ -1,17 +1,11 @@
-roscore
 
-roslaunch jetbot_ros opencv_apps.launch
-rosrun web_video_server web_video_server
-
-roslaunch rosbridge_server rosbridge_websocket.launch
-rosrun jetbot_ros jetbotmini_driver.py
-
-
-2대작동시 ( usb 장착시 가능)
 roscore
 
 roslaunch  jetbot_ros opencv_apps.launch ( 차량 자체 카메라 동작)
-roslaunch usb_cam usb_cam-test.launch( 웹캠 실행)
+roslaunch usb_cam usb_cam-test.launch( 웹캠 실행) - 2대작동시 ( usb 장착시 가능)
 
-rosrun web_video_server web_video_server( 실행되고 있는 topic을 표시해주는 창)
+rosrun web_video_server web_video_server
+
+roslaunch rosbridge_server rosbridge_websocket.launch ( 실행되고 있는 topic을 표시해주는 창) : 다른 토픽들 실행하면 확인가능능
+rosrun jetbot_ros jetbotmini_driver.py
 

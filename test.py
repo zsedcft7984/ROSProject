@@ -3,180 +3,134 @@
 import rospy
 import random
 import threading
+import time
 from time import sleep
 from jetbotmini_msgs.msg import *
 from jetbotmini_msgs.srv import *
 import RPi.GPIO as GPIO
 import smbus
 import cv2
+import numpy as np
 from cv_bridge import CvBridge
+from std_msgs.msg import String
 from sensor_msgs.msg import Image
 
-# I2C 설정
 bus = smbus.SMBus(1)
 ADDRESS = 0x1B
 
-# LED 및 버튼 핀 번호 설정
-Led_G_pin = 24
-Led_B_pin = 23
 Key1_pin = 8
-
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(Led_G_pin, GPIO.OUT, initial=GPIO.HIGH)
-GPIO.setup(Led_B_pin, GPIO.OUT, initial=GPIO.HIGH)
 GPIO.setup(Key1_pin, GPIO.IN)
 
-print("로봇 시작!")
+print("Starting now!")
 
-class JetBotDriver:
+class transbot_driver:
     def __init__(self):
-        # 종료 시 실행할 함수 등록
-        rospy.on_shutdown(self.shutdown)
+        rospy.on_shutdown(self.cancel)
+        self.srv_Buzzer = rospy.Service("/Buzzer", Buzzer, self.Buzzercallback)
+        self.srv_Motor = rospy.Service("/Motor", Motor, self.Motorcallback)
+        self.motorcontrol = rospy.Service("/MotorControl", String, self.Motorcontrol)
+ 
+        # self.volPublisher = rospy.Publisher("/voltage", Battery, queue_size=10)
 
-        # ROS 서비스 및 퍼블리셔 설정
-        self.srv_Buzzer = rospy.Service("/Buzzer", Buzzer, self.buzzer_callback)
-        self.srv_LED_BLUE = rospy.Service("/LEDBLUE", LEDBLUE, self.led_blue_callback)
-        self.srv_LED_GREEN = rospy.Service("/LEDGREE", LEDGREE, self.led_green_callback)
-        self.srv_Motor = rospy.Service("/Motor", Motor, self.motor_callback)
-        self.volPublisher = rospy.Publisher("/voltage", Battery, queue_size=10)
-
-        # 카메라 이미지 퍼블리셔 설정
-        self.imagePublisher = rospy.Publisher("/camera/image_raw", Image, queue_size=10)
-        self.bridge = CvBridge()
-
-        # 카메라 설정
-        self.capture = cv2.VideoCapture(self.gstreamer_pipeline(), cv2.CAP_GSTREAMER)
-        if not self.capture.isOpened():
-            rospy.logerr("카메라를 열 수 없습니다.")
-            exit()
-
-    def gstreamer_pipeline(
-        self,
-        capture_width=640,
-        capture_height=480,
-        display_width=640,
-        display_height=480,
-        framerate=30,
-        flip_method=0,
-    ):
-        return (
-            "nvarguscamerasrc ! "
-            "video/x-raw(memory:NVMM), "
-            "width=(int)%d, height=(int)%d, "
-            "format=(string)NV12, framerate=(fraction)%d/1 ! "
-            "nvvidconv flip-method=%d ! "
-            "video/x-raw, width=(int)%d, height=(int)%d, format=(string)BGRx ! "
-            "videoconvert ! "
-            "video/x-raw, format=(string)BGR ! appsink"
-            % (
-                capture_width,
-                capture_height,
-                framerate,
-                flip_method,
-                display_width,
-                display_height,
-            )
-        )
-
-    def publish_camera_data(self):
-        """카메라 영상을 주기적으로 퍼블리시하는 함수"""
-        while not rospy.is_shutdown():
-            ret, frame = self.capture.read()
-            if ret:
-                try:
-                    # OpenCV 이미지를 ROS 메시지로 변환
-                    ros_image = self.bridge.cv2_to_imgmsg(frame, "bgr8")
-                    self.imagePublisher.publish(ros_image)
-                except Exception as e:
-                    rospy.logerr("이미지 퍼블리시 오류: %s" % e)
-            else:
-                rospy.logwarn("카메라에서 영상을 읽을 수 없습니다.")
-
-    def shutdown(self):
-        """로봇 종료 시 실행되는 함수"""
+    def cancel(self):
         self.srv_Buzzer.shutdown()
-        self.srv_LED_BLUE.shutdown()
-        self.srv_LED_GREEN.shutdown()
         self.srv_Motor.shutdown()
-        self.volPublisher.unregister()
-        self.imagePublisher.unregister()
-        self.capture.release()
+        # self.volPublisher.unregister()
         GPIO.cleanup()
-        rospy.loginfo("로봇 종료...")
+        rospy.loginfo("Close the robot...")
         rospy.sleep(1)
 
-    def publish_battery_data(self):
-        """배터리 전압 정보를 주기적으로 발행하는 함수"""
-        while not rospy.is_shutdown():
-            sleep(30)
-            AD_value = bus.read_i2c_block_data(ADDRESS, 0x00, 2)
-            voltage = ((AD_value[0] << 8) + AD_value[1]) * 13.3 / 1023.0
-            battery = Battery()
-            battery.Voltage = voltage
-            self.volPublisher.publish(battery)
+    # def pub_data(self):
+    #     # Release trolley battery voltage
+    #     while not rospy.is_shutdown():
+    #         sleep(30)
+    #         AD_value = bus.read_i2c_block_data(ADDRESS,0x00,2)
+    #         voltage = ((AD_value[0] << 8) + AD_value[1]) * 13.3 / 1023.0
+    #         battery = Battery()
+    #         battery.Voltage = voltage
+    #         self.volPublisher.publish(battery)
 
-    def buzzer_callback(self, request):
-        """부저(경고음) 제어 함수"""
-        if not isinstance(request, BuzzerRequest):
-            return
-        bus.write_byte_data(ADDRESS, 0x06, request.buzzer)
+    def Buzzercallback(self, request):
+        # Buzzer control, server callback function
+        if not isinstance(request, BuzzerRequest): return
+        bus.write_byte_data(ADDRESS,0x06,request.buzzer)
         sleep(0.01)
-        bus.write_byte_data(ADDRESS, 0x06, request.buzzer)
+        bus.write_byte_data(ADDRESS,0x06,request.buzzer)
         response = BuzzerResponse()
         response.result = True
         return response
 
-    def led_blue_callback(self, request):
-        """파란색 LED 제어 함수"""
-        if not isinstance(request, LEDBLUERequest):
-            return
-        GPIO.output(Led_B_pin, GPIO.LOW if request.ledblue == 1 else GPIO.HIGH)
-        response = LEDBLUEResponse()
-        response.result = True
-        return response
-
-    def led_green_callback(self, request):
-        """초록색 LED 제어 함수"""
-        if not isinstance(request, LEDGREERequest):
-            return
-        GPIO.output(Led_G_pin, GPIO.LOW if request.ledgree == 1 else GPIO.HIGH)
-        response = LEDGREEResponse()
-        response.result = True
-        return response
-
-    def motor_callback(self, request):
-        """모터 제어 함수"""
-        if not isinstance(request, MotorRequest):
-            return
-
-        # 왼쪽 모터 방향 및 속도 설정
-        leftdir = 1 if request.leftspeed >= 0 else 0
-        leftspeed = abs(request.leftspeed)
-
-        # 오른쪽 모터 방향 및 속도 설정
-        rightdir = 1 if request.rightspeed >= 0 else 0
-        rightspeed = abs(request.rightspeed)
-
-        # I2C를 통해 모터 속도 및 방향 설정
-        bus.write_i2c_block_data(
-            ADDRESS, 0x01, [leftdir, int(leftspeed * 255), rightdir, int(rightspeed * 255)]
-        )
+    def Motorcallback(self, request):
+        # Motor control, server callback function
+        if not isinstance(request, MotorRequest): return
+        if request.leftspeed < 0:
+            request.leftspeed = -request.leftspeed
+            leftdir = 0
+        else:
+            leftdir = 1
+        if request.rightspeed < 0:
+            request.rightspeed = -request.rightspeed
+            rightdir = 0
+        else:
+            rightdir = 1
+        bus.write_i2c_block_data(ADDRESS,0x01,[leftdir,int(request.leftspeed*255),rightdir,int(request.rightspeed*255)])
         sleep(0.01)
-        bus.write_i2c_block_data(
-            ADDRESS, 0x01, [leftdir, int(leftspeed * 255), rightdir, int(rightspeed * 255)]
-        )
-
+        bus.write_i2c_block_data(ADDRESS,0x01,[leftdir,int(request.leftspeed*255),rightdir,int(request.rightspeed*255)])
         response = MotorResponse()
         response.result = True
         return response
+    
+    def Motorcontrol(self, request): 
+        # # Handle motor control request based on String input
+        # if not isinstance(request, String): 
+        #     return String(data="Invalid request type")
 
 
-if __name__ == "__main__":
+        command = request.data.lower()
+
+        # Default values
+        speed = 0.5
+        leftdir = 1
+        rightdir = 1
+
+        # Process movement commands
+        if command == "forward":
+            leftdir = rightdir = 1
+        elif command == "backward":
+            leftdir = rightdir = 0
+        elif command == "left":
+            leftdir = 0
+            rightdir = 1
+        elif command == "right":
+            leftdir = 1
+            rightdir = 0
+        elif command == "stop":
+            speed = 0  # Stop the motors
+        elif "speed" in command:
+            if "fast" in command:
+                speed = 0.8
+            elif "slow" in command:
+                speed = 0.3
+            elif "normal" in command:
+                speed = 0.5
+
+        # Send motor control command via I2C
+        bus.write_i2c_block_data(ADDRESS, 0x01, [
+            leftdir, int(speed * 255), rightdir, int(speed * 255)
+        ])
+
+if __name__ == '__main__':
     rospy.init_node("driver_node", anonymous=False)
     try:
-        driver = JetBotDriver()
-        driver.publish_battery_data()
-        driver.publish_camera_data()  # 카메라 데이터 퍼블리시 시작
+        driver = transbot_driver()
+        driver.pub_data()
         rospy.spin()
-    except:
-        rospy.loginfo("오류 발생, 종료합니다.")
+    except Exception as e:
+        rospy.loginfo(e)
+        rospy.loginfo("Final!!!")
+
+
+
+
+

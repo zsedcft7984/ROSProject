@@ -1,0 +1,4 @@
+LX 터미널 열고
+cd 패키지경로
+jupiter notebook .
+하면 해당 패키지열림
