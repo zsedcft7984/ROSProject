@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROS Subscriber & Publisher</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/roslibjs/1.1.0/roslib.min.js"></script>
+    
+    <!-- 전압 정보 수신 (초기 실행이 필요하므로 head에 배치) -->
+    <script src="config.js"></script>
+    <script src="subscriber.js"></script> 
+</head>
+<body>
+    <h1>ROS Topic Subscriber & Command Publisher</h1>
+
+    <!-- 전압 표시 -->
+    <p id="voltageDisplay">Voltage: Waiting for data...</p>
+
+    <!-- 로봇 이동 버튼 -->
+    <button id="moveForward">전진</button>
+    <button id="stop">정지</button>
+    <button id="lineTracing">라인 트레이싱 시작</button>
+    <button id="stopLineTracing">라인 트레이싱 중지</button>  <!-- 라인트레이싱 중지 버튼 추가 -->
+
+    <!-- 실시간 영상 스트리밍 -->
+    <h2>Live Video Stream</h2>
+    <img id="videoStream" width="640" height="480" alt="Live Video Stream">
+
+    <!-- 명령 전송 (DOM이 로드된 후 실행해야 하므로 body 끝에 배치) -->
+    <script src="publisher.js"></script>
+</body>
+</html>

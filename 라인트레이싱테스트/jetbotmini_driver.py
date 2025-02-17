@@ -1,47 +1,32 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 import rospy
-import random
-import threading
 import time
+import subprocess
 from time import sleep
 from jetbotmini_msgs.msg import *
 from jetbotmini_msgs.srv import *
 import RPi.GPIO as GPIO
 import smbus
-import cv2
 import numpy as np
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import CameraInfo
-from cv_bridge import CvBridge
+import cv2
 
+bus = smbus.SMBus(1)
+ADDRESS = 0x1B
 # GStreamer 파이프라인 설정
-def gstreamer_pipeline(
-    capture_width=640,
-    capture_height=480,
-    display_width=640,
-    display_height=480,
-    framerate=30,
-    flip_method=0):
+def gstreamer_pipeline():
+    
     return (
         "nvarguscamerasrc ! "
-        "video/x-raw(memory:NVMM), "
-        "width=(int)%d, height=(int)%d, "
-        "format=(string)NV12, framerate=(fraction)%d/1 ! "
-        "nvvidconv flip-method=%d ! "
-        "video/x-raw, width=(int)%d, height=(int)%d, format=(string)BGRx ! "
-        "videoconvert ! "
-        "video/x-raw, format=(string)BGR ! appsink"
-        % (
-            capture_width,
-            capture_height,
-            framerate,
-            flip_method,
-            display_width,
-            display_height
+        "video/x-raw(memory:NVMM), width=(int)640, height=(int)480, "
+        "format=(string)NV12, framerate=(fraction)30/1 ! "
+        "nvvidconv ! video/x-raw, format=(string)BGR ! "
+        "videoconvert ! appsink"
         )
-    )
+    
 
 class transbot_driver:
     def __init__(self):
@@ -52,12 +37,13 @@ class transbot_driver:
         
         # 카메라 퍼블리셔 설정
         self.image_pub = rospy.Publisher("/cam", Image, queue_size=10)
-        self.bridge = CvBridge()
-        self.capture = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
+        self.process = subprocess.Popen(
+            gstreamer_pipeline(),
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
         
-        if not self.capture.isOpened():
-            rospy.logerr("Camera not found!")
-            return
         
         rospy.loginfo("Camera stream started...")
 
@@ -65,6 +51,7 @@ class transbot_driver:
         self.srv_Buzzer.shutdown()
         self.srv_Motor.shutdown()
         self.srv_MotorControl.shutdown()
+        self.process.terminate()  # GStreamer 프로세스 종료
         GPIO.cleanup()
         rospy.loginfo("Close the robot...")
         rospy.sleep(1)
@@ -131,48 +118,32 @@ class transbot_driver:
         bus.write_i2c_block_data(ADDRESS, 0x01, [leftdir, int(speed*255), rightdir, int(speed*255)])
     
     def start_stream(self):
-        rospy.loginfo("Starting camera stream...")
+        rospy.loginfo("Starting GStreamer camera stream...")
         rate = rospy.Rate(10)
+
         while not rospy.is_shutdown():
-            start_time = time.time()
-            ret, frame = self.capture.read()
-            if not ret:
-                rospy.logwarn("Failed to capture image")
-                continue
-            
-            # OpenCV 이미지를 ROS 이미지로 변환
-            ros_image = self.cv2_to_ros_image(frame)
-            
-            # 퍼블리시
-            self.image_pub.publish(ros_image)
-            
-            # FPS 계산
-            end_time = time.time()
-            fps = 1.0 / (end_time - start_time)
-            rospy.loginfo(f"Publishing image - FPS: {fps:.2f}")
-            
+            try:
+                # GStreamer 출력에서 프레임을 읽음
+                frame_data = self.process.stdout.read(640 * 480 * 3)  # 640x480 RGB 이미지
+                if len(frame_data) != 640 * 480 * 3:
+                    rospy.logwarn("Incomplete frame received")
+                    continue
+
+                # ROS Image 메시지 생성
+                img_msg = Image()
+                img_msg.header.stamp = rospy.Time.now()
+                img_msg.height = 480
+                img_msg.width = 640
+                img_msg.encoding = "rgb8"
+                img_msg.is_bigendian = 0
+                img_msg.step = 640 * 3
+                img_msg.data = frame_data
+
+                self.image_pub.publish(img_msg)  # 영상 퍼블리싱
+            except Exception as e:
+                rospy.logerr(f"Error in video stream: {e}")
+
             rate.sleep()
-
-        self.capture.release()
-    
-    def cv2_to_ros_image(self, cv_image):
-        """ OpenCV 이미지를 ROS 이미지로 변환 """
-        ros_image = Image()
-
-        # 헤더 설정
-        ros_image.header.stamp = rospy.Time.now()
-
-        # 이미지 타입 및 데이터 설정
-        ros_image.height = cv_image.shape[0]
-        ros_image.width = cv_image.shape[1]
-        ros_image.encoding = "bgr8"  # OpenCV에서 BGR로 읽음
-        ros_image.is_bigendian = False
-        ros_image.step = cv_image.shape[1] * 3  # BGR의 경우 3 채널
-
-        # 데이터 필드에 OpenCV 이미지 데이터를 넣음
-        ros_image.data = np.array(cv_image).tobytes()
-
-        return ros_image
 
 if __name__ == '__main__':
     rospy.init_node("driver_node", anonymous=False)

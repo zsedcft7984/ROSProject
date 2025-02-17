@@ -9,14 +9,21 @@
     <!-- 차량 주소소 -->
     <script src="config.js"></script>
     <!-- 카메라 정보 수신 -->
+    <script src="camera_stream.js"></script>
 </head>
 <body>
     <h1>ROS Robot Control</h1>
 
     <!-- 카메라 영상 스트리밍 -->
-    <video id="cameraStream" width="640" height="480" autoplay></video>
-
-
+    <canvas id="cameraCanvas" width="640" height="480"></canvas>
+    <!-- 카메라 정보 출력 -->
+    <div id="cameraInfo">
+        <h2>카메라 정보</h2>
+        <p><strong>Width:</strong> <span id="imageWidth">0</span></p>
+        <p><strong>Height:</strong> <span id="imageHeight">0</span></p>
+        <p><strong>Encoding:</strong> <span id="imageEncoding">None</span></p>
+        <p><strong>Step:</strong> <span id="imageStep">0</span></p>
+    </div>
 
     <!-- 모터 제어 버튼 -->
     <h2>Motor Control</h2>
@@ -35,12 +42,9 @@
     <button onclick="controlBuzzer(1)">Buzzer ON</button>
     <button onclick="controlBuzzer(0)">Buzzer OFF</button>
 
-    <h2>Current Command: <span id="currentCommand">None</span></h2>
-
     <!-- 모터 제어 명령어 -->
     <script src="motor_control.js"></script>
-    <!-- 부저 제어 멸령어어 -->
+    <!-- 부저 제어 명령어 -->
     <script src="buzzer_control.js"></script>
 </body>
 </html>
-
