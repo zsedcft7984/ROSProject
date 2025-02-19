@@ -71,8 +71,8 @@ add_service_files(
 )
 
 3. bulid
-cd ~/catkin_ws : 워크스페이스이동
-catkin_make or catkin build : 빌드수행
+cd /home/jetson/workspace/catkin_ws : 워크스페이스이동
+catkin_make  : 빌드수행
 source devel/setup.bash : 빌드 후 설정
 
 정상적으로 작동한다면 해당 서비스가 추가된 것이니 이제 코드를 수정하면된다

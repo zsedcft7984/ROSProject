@@ -3,22 +3,29 @@
 import time
 import cv2 as cv
 import numpy as np
+from PIL import Image, ImageDraw, ImageFont
+import os
 import rospy
+import threading
+from time import sleep
 from sensor_msgs.msg import Joy
-from jetbotmini_msgs.srv import Motor, MotorRequest
+from jetbotmini_msgs.msg import *
+from jetbotmini_msgs.srv import *
 from actionlib_msgs.msg import GoalID
 from jetbot_ros.cfg import LineDetectPIDConfig
 from dynamic_reconfigure.server import Server
 
-# 전역 변수 설정
-control_mode = 'auto'  # 기본값: 자동 주행
-mot_start = 0
+global color_lower
+global color_upperv
+global show
+global mot_start
+
+
+color_lower = np.array([156,43,46], dtype=np.uint8)
+color_upper = np.array([180, 255, 255], dtype=np.uint8)
 show = 0
+mot_start = 0
 
-# ROS 노드 초기화
-rospy.init_node('robot_control')
-
-# 카메라 스트리밍 설정
 def gstreamer_pipeline(
     capture_width=640,
     capture_height=480,
@@ -46,82 +53,129 @@ def gstreamer_pipeline(
         )
     )
 
-# 모터 제어 함수
-def motor_control(leftspeed, rightspeed):
-    motor_client = rospy.ServiceProxy("/Motor", Motor)
-    motor_client.wait_for_service()
-    request = MotorRequest()
-    request.leftspeed = leftspeed
-    request.rightspeed = rightspeed
-    try:
-        response = motor_client.call(request)
-        return response.result
-    except Exception:
-        rospy.loginfo("Motor error")
-    return False
+class JoyTeleop:
+    def __init__(self):
+        rospy.on_shutdown(self.cancel)
+        self.Buzzer_value = False
+        self.LEDBLUE_value = False
+        self.LEDGREE_value = False
+        self.speed_value = 0.5
+        self.turn_value = 0.4
+        self.angle1_value = 0
+        self.angle2_value = 0
+        self.Joy_active = False
+        self.cancel_time = time.time()
+        self.pub_goal = rospy.Publisher("/move_base/cancel", GoalID, queue_size=10)
+        self.pub_JoyState = rospy.Publisher("/JoyState", JoyState, queue_size=10)
+        self.Motor_client = rospy.ServiceProxy("/Motor", Motor)
+        Server(LineDetectPIDConfig, self.dynamic_reconfigure_callback)
 
-# 자동 주행 (라인 트레이싱)
-def color_display(image):
-    global mot_start
-    hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
-    color_lower = np.array([156, 43, 46], dtype=np.uint8)
-    color_upper = np.array([180, 255, 255], dtype=np.uint8)
-    mask = cv.inRange(hsv, color_lower, color_upper)
-    cnts = cv.findContours(mask.copy(), cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)[-2]
-    if len(cnts) > 0:
-        cnt = max(cnts, key=cv.contourArea)
-        (color_x, color_y), color_radius = cv.minEnclosingCircle(cnt)
-        if color_radius > 30:
-            cv.circle(image, (int(color_x), int(color_y)), int(color_radius), (255, 0, 255), 2)
-            center_x = (320 - color_x) / 320
-            if mot_start == 1:
-                motor_control(0.5 - 0.4 * center_x, 0.5 + 0.4 * center_x)
-    else:
-        motor_control(0, 0)
-    return image
+    def cancel(self):
+        self.pub_goal.unregister()
+        self.pub_JoyState.unregister()
+        self.Motor_client.close()
+        
+    def colorDisplay(self, image, font_path):
+        color_lower = np.array([self.Hmin, self.Smin, self.Vmin], dtype=np.uint8)
+        color_upper = np.array([self.Hmax, self.Smax, self.Vmax], dtype=np.uint8)
+        image=cv.GaussianBlur(image,(5,5),0)     
+        hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
+        hsv.astype(np.uint8)
+        mask=cv.inRange(hsv,color_lower,color_upper)  
+        mask=cv.erode(mask,None,iterations=2)
+        mask=cv.dilate(mask,None,iterations=2)
+        mask=cv.GaussianBlur(mask,(3,3),0)     
+        cnts=cv.findContours(mask.copy(),cv.RETR_EXTERNAL,cv.CHAIN_APPROX_SIMPLE)[-2]
+        if len(cnts)>0:
+            cnt = max (cnts,key=cv.contourArea)
+            (color_x,color_y),color_radius=cv.minEnclosingCircle(cnt)
+            if color_radius > 30:
+                # 将检测到的颜色标记出来
+                # Mark the detected color
+                cv.circle(image,(int(color_x),int(color_y)),int(color_radius),(255,0,255),2)   
+                center_x = (320 - color_x)/320
+                if mot_start == 1:
+                    self.Motor_srv(
+                        float(self.speed_value - self.turn_value * center_x),
+                        float(self.speed_value + self.turn_value * center_x)
+                    )
+        else:
+            self.Motor_srv(0,0)
+        return image, mask
 
-# 수동 조작 (조이스틱 입력 처리)
-def joystick_control(joy_msg):
-    speed = joy_msg.axes[1]  # 앞/뒤 이동
-    turn = joy_msg.axes[0]   # 좌/우 회전
-    motor_control(speed, turn)
+    def cancel_nav(self):
+        # 发布move_base取消命令
+        # Publish move_ Base cancel command
+        now_time = time.time()
+        if now_time - self.cancel_time > 1:
+            self.Joy_active = not self.Joy_active
+            self.pub_JoyState.publish(JoyState(self.Joy_active))
+            self.pub_goal.publish(GoalID())
+            self.cancel_time=now_time
 
-# 메인 실행 함수
-def main():
-    global control_mode, show
-    capture = cv.VideoCapture(gstreamer_pipeline(), cv.CAP_GSTREAMER)
-    
-    if not capture.isOpened():
-        rospy.loginfo("카메라를 열 수 없습니다.")
-        return
-    
-    # 조이스틱 입력 구독
-    joy_subscriber = rospy.Subscriber("/joy", Joy, joystick_control)
+    def Motor_srv(self, leftspeed, rightspeed):
+        '''
+        电机控制
+        Motor control
+        :param value:
+         [  leftspeed：   0,1
+            rightspeed：  0,1]
+        '''
+        self.Motor_client.wait_for_service()
+        request = MotorRequest()
+        request.leftspeed = leftspeed
+        request.rightspeed = rightspeed
+        try:
+            response = self.Motor_client.call(request)
+            if isinstance(response, MotorResponse): return response.result
+        except Exception:
+            rospy.loginfo("Motor error")
+        return False
+        
+    def dynamic_reconfigure_callback(self, config, level):
+        print ("dynamic_reconfigure_callback!!!")
+        self.speed_value = config['speed']
+        self.turn_value = config['turn']
+        
+        self.Hmin = config['Hmin']
+        self.Smin = config['Smin']
+        self.Vmin = config['Vmin']
+        self.Hmax = config['Hmax']
+        self.Smax = config['Smax']
+        self.Vmax = config['Vmax']
+        
+        return config        
 
-    while not rospy.is_shutdown():
+if __name__ == '__main__':
+    rospy.init_node('color_line')
+    joy = JoyTeleop()
+    font_path = "../font/Block_Simplified.TTF"
+    capture = cv.VideoCapture(gstreamer_pipeline(flip_method=0), cv.CAP_GSTREAMER)
+    cv_edition = cv.__version__
+    if cv_edition[0] == '3': capture.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc(*'XVID'))
+    else: capture.set(cv.CAP_PROP_FOURCC, cv.VideoWriter.fourcc('M', 'J', 'P', 'G'))
+    capture.set(cv.CAP_PROP_FRAME_WIDTH, 640)
+    capture.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
+    print("capture get FPS : ", capture.get(cv.CAP_PROP_FPS))
+    while capture.isOpened():
+        start = time.time()
         ret, frame = capture.read()
-        if not ret:
-            rospy.loginfo("프레임을 읽을 수 없습니다.")
-            break
-        
-        if control_mode == 'auto':
-            frame = color_display(frame)  # 자동 주행 실행
-        elif control_mode == 'manual':
-            pass  # 조이스틱 입력으로 모터가 조작됨
-
-        # 화면 출력
-        if show == 1:
-            cv.imshow('Frame', frame)
-        
         action = cv.waitKey(10) & 0xFF
-        if action == ord('q'):
-            break
-        elif action == ord('m'):  # 'm' 키 입력 시 모드 전환
-            control_mode = 'manual' if control_mode == 'auto' else 'auto'
-            rospy.loginfo(f"모드 변경: {control_mode}")
-    
+        frame, binary = joy.colorDisplay(frame, font_path)
+        end = time.time()
+        fps = 1 / (end - start)
+        text = "FPS : " + str(int(fps))
+        cv.putText(frame, text, (30, 30), cv.FONT_HERSHEY_SIMPLEX, 0.6, (100, 200, 200), 1)
+        cv.imshow('frame', frame)
+        if action == ord('q') or action == 113: break
+        elif action == ord('i') or action == 105: show = 1
+        elif action == 32: show = 0
+        elif action == ord('s'): mot_start = 1
+        if show == 1:
+            cv.imshow('frame', binary)
+        elif show == 0:
+            cv.imshow('frame', frame)
+    joy.Motor_srv(0,0)
     capture.release()
     cv.destroyAllWindows()
 
-if __name__ == "__main__":
-    main()
