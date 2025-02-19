@@ -1,5 +1,4 @@
-
-roscore
+roscore : 로스 시스템 실행
 
 roslaunch  jetbot_ros opencv_apps.launch ( 차량 자체 카메라 동작)
 roslaunch usb_cam usb_cam-test.launch( 웹캠 실행) - 2대작동시 ( usb 장착시 가능)

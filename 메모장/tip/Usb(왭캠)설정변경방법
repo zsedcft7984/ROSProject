@@ -1,0 +1,27 @@
+장치에서 USB포트를 이용해서 왭캠을 사용한다면
+
+roslaunch usb_cam usb_cam-test.launch
+파일을 통해서 사용할 수 있는데
+단순히 실행한다면 오류가 뜸
+
+<헤결방법>
+LXTerminal에 'rospack list' 를 입력해 장치에 설치된 패키지들을 확인가능
+패키지에 뜬느 코드들은 "패키지명 설치경로"를 의미
+패키지 중에 'usb_cam /opt/ros/melodic/share/vision_msgs' 라는 코드를 볼수 있는데
+다시 터미널에 'cd /opt/ros/melodic/share/vision_msgs'을 열어주고고 
+"cd "상태에서 탭을 누르면 해당 폴더에 있는 파일을 확인할수 있는데 여기서 "launch" 파일로 들어가줌
+안에는 하나의 파일밖에 없기 때문에 "ls "탭을하면 해당 파일 명이 뜬다
+이제 이파을 관리자 권한으로 실행시키기위해
+"sudo nane usb_cam usb_cam-test.launch" 를 입력하면 
+터미널창에 해당 코드가 열리게 되는데 수정해 주어야 한는 값은
+<parma name="pixel_format" value="YUYV"> 에서 YUYV -> yuyv 로 수정해주고
+ctrl+x -> y -> Enter 를 눌러주면 변경사항이 저장되고 정상 작동을 하게된다
+
+<추가>
+만약 코드를 실행하는중 video1 을 찾을 수 없다 혹은 video2를 찾을수 없다고 뜨는데
+해당 오류는 추측상 차량의 왭캠의 연결에 이상이 생겨 발생하는 오류인거 같은데 이 오류가 유지된다면
+위와 같은 방법으로 런치 파일을 열어주고고
+<parma name="video_device" value="/dev/video1"> 에서 video1을 오류가뜬 비디오로 바꿔주면됨
+
+fps 와 같은 수치나 파일 압축 방법도 변경할 수 있다
+

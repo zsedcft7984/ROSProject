@@ -1,0 +1,35 @@
+1.
+\workspace\catkin_ws\src\jetbotmini_msgs\srv 에 있는 srv에 String위치에 들어갈 파일을 생성하면 되는데 방법은 아래와 같다
+
+cd \workspace\catkin_ws\src\jetbotmini_msgs\srv
+touch MotorControl.srv
+
+(srv 내용)
+#request
+string command
+
+#response
+bool result
+
+2.
+CMakeLists.txt 수정: CMakeLists.txt 파일을 열어 다음과 같이 수정합니다.
+## Add service files
+add_service_files(
+  
+  MotorControl.srv  # 새로 생성한 서비스 파일 추가
+)
+
+3. bulid
+cd /home/jetson/workspace/catkin_ws : 워크스페이스이동
+catkin_make  : 빌드수행
+source devel/setup.bash : 빌드 후 설정
+
+정상적으로 작동한다면 해당 서비스가 추가된 것이니 이제 코드를 수정하면된다
+
+py 파일 수정내용용
+self.motorcontrol = rospy.Service("/MotorControl", MotorControl, self.Motorcontrol)
+으로하고
+
+def Motorcontrol(self, request): 에서
+
+command -> request.command 로 고침
