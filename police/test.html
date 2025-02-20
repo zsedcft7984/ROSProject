@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROS Robot Control</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/roslibjs/1.1.0/roslib.min.js"></script>
+    
+    <!-- 차량 주소 -->
+    <script src="config.js"></script>
+    <!-- 배터리 구독 관련 -->
+    <script src="battery_control.js"></script>
+</head>
+<body>
+    <h1>ROS Robot Control</h1>
+    <!-- 영상 관련 코드(추가예정!)-->>
+
+    <!-- 모터 제어 버튼 -->
+    <h2>Motor Control</h2>
+    <!-- 방향 제어 버튼 -->
+    <h2>Motor Control</h2>
+    <button id="forwardButton">Forward</button>
+    <button id="backwardButton">Backward</button>
+    <button id="leftButton">Left</button>
+    <button id="rightButton">Right</button>
+    <button id="stopButton">Stop</button>
+    
+    <button id="speedFastButton">Speed Fast</button>
+    <button id="speedSlowButton">Speed Slow</button>
+    <button id="speedNormalButton">Speed Normal</button>
+    
+    <!-- 부저 제어 버튼 -->
+    <h2>Buzzer Control</h2>
+    <!-- 부저 켜기 버튼 -->
+    <button id="buzzerOnButton" onclick="controlBuzzer(1)">Buzzer ON</button>
+
+    <!-- 부저 끄기 버튼 -->
+    <button id="buzzerOffButton" onclick="controlBuzzer(0)">Buzzer OFF</button>
+    <!-- 배터리 전압 -->
+    <h2>Battery Voltage</h2>
+    <p id="battery-voltage">Loading...</p>
+
+    <!-- 라인트레이싱 제어 버튼 -->
+    <h2>Line Tracing Control</h2>
+    <button onclick="toggleLineTracing()">Toggle Line Tracing</button>
+
+    <!-- 모터 제어 명령어 -->
+    <script src="motor_control.js"></script>
+    <!-- 부저 제어 명령어 -->
+    <script src="buzzer_control.js"></script>
+    <!-- 라인트레이싱 제어 -->
+    <script src="line_tracing_control.js"></script>
+</body>
+</html>
