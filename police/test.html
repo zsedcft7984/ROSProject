@@ -19,15 +19,16 @@
     <h2>Motor Control</h2>
     <!-- 방향 제어 버튼 -->
     <h2>Motor Control</h2>
-    <button id="forwardButton">Forward</button>
-    <button id="backwardButton">Backward</button>
-    <button id="leftButton">Left</button>
-    <button id="rightButton">Right</button>
-    <button id="stopButton">Stop</button>
     
-    <button id="speedFastButton">Speed Fast</button>
-    <button id="speedSlowButton">Speed Slow</button>
-    <button id="speedNormalButton">Speed Normal</button>
+    <button onclick="sendCommand('forward')">Forward</button>
+    <button onclick="sendCommand('backward')">Backward</button>
+    <button onclick="sendCommand('left')">Left</button>
+    <button onclick="sendCommand('right')">Right</button>
+    <button onclick="sendCommand('stop')">Stop</button>
+    
+    <button onclick="sendCommand('speed fast')">Speed Fast</button>
+    <button onclick="sendCommand('speed slow')">Speed Slow</button>
+    <button onclick="sendCommand('speed normal')">Speed Normal</button>
     
     <!-- 부저 제어 버튼 -->
     <h2>Buzzer Control</h2>

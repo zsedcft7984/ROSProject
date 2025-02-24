@@ -15,34 +15,30 @@ ros_pub.on('close', function() {
 
 // 모터 제어 명령을 발행하는 함수
 function sendMotorCommand(command) {
-    const motorCommand = new ROSLIB.Message({
-        data: command
+    const request = new ROSLIB.ServiceRequest({
+        command: command
     });
 
     // 모터 제어를 위한 ROS 토픽 설정
-    const motorCommandTopic = new ROSLIB.Topic({
+    const motorCommandService = new ROSLIB.Service({
         ros: ros_pub,
         name: "/MotorControl",  // 사용되는 실제 토픽 이름
         serviceType: "jetbotmini_msgs/MotorControl"  // 서비스 타입
     });
 
     // 명령 발행
-    motorCommandTopic.publish(motorCommand);
+    motorCommandService.callService(motorCommand);
     console.log('[Publisher] Command sent:', command);
 }
+function sendCommand(command) {
+    var request = new ROSLIB.ServiceRequest({
+        command: command
+    });
 
-// 버튼 클릭 시 호출되는 명령어들
-function setupMotorControls() {
-    // 버튼에 이벤트 추가
-    document.querySelector("#forwardButton").onclick = () => sendMotorCommand('forward');
-    document.querySelector("#backwardButton").onclick = () => sendMotorCommand('backward');
-    document.querySelector("#leftButton").onclick = () => sendMotorCommand('left');
-    document.querySelector("#rightButton").onclick = () => sendMotorCommand('right');
-    document.querySelector("#stopButton").onclick = () => sendMotorCommand('stop');
-    document.querySelector("#speedFastButton").onclick = () => sendMotorCommand('speed fast');
-    document.querySelector("#speedSlowButton").onclick = () => sendMotorCommand('speed slow');
-    document.querySelector("#speedNormalButton").onclick = () => sendMotorCommand('speed normal');
+    motorControlClient.callService(request, function(result) {
+        console.log("Result from service call:", result.data);
+        document.getElementById("currentCommand").innerText = command;
+    });
+
+    console.log("Sent command:", command);
 }
-
-// 초기화 함수
-window.onload = setupMotorControls;
