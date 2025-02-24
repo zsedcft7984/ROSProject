@@ -12,14 +12,21 @@
     <script src="battery_control.js"></script>
 </head>
 <body>
+    <!-- <img id="camera-feed" src="http://192.168.137.64:8080/stream?topic=/usb_cam/image_raw" width="640" height="360" alt="Live Stream" /> -->
+
     <h1>ROS Robot Control</h1>
-    <!-- 영상 관련 코드(추가예정!)-->>
+    <!-- 배터리 전압 -->
+    <h2>Battery Voltage</h2>
+    <p id="voltageDisplay">Waiting for voltage data...</p>
+
+    <!-- 라인트레이싱 제어 버튼 -->
+    <h2>Line Tracing Control</h2>
+    <button id="toggleButton">Start Line Tracing</button>
+
 
     <!-- 모터 제어 버튼 -->
-    <h2>Motor Control</h2>
-    <!-- 방향 제어 버튼 -->
-    <h2>Motor Control</h2>
-    
+    <h1>Motor Control</h1>
+
     <button onclick="sendCommand('forward')">Forward</button>
     <button onclick="sendCommand('backward')">Backward</button>
     <button onclick="sendCommand('left')">Left</button>
@@ -29,27 +36,18 @@
     <button onclick="sendCommand('speed fast')">Speed Fast</button>
     <button onclick="sendCommand('speed slow')">Speed Slow</button>
     <button onclick="sendCommand('speed normal')">Speed Normal</button>
+
     
     <!-- 부저 제어 버튼 -->
     <h2>Buzzer Control</h2>
-    <!-- 부저 켜기 버튼 -->
     <button id="buzzerOnButton" onclick="controlBuzzer(1)">Buzzer ON</button>
-
-    <!-- 부저 끄기 버튼 -->
     <button id="buzzerOffButton" onclick="controlBuzzer(0)">Buzzer OFF</button>
-    <!-- 배터리 전압 -->
-    <h2>Battery Voltage</h2>
-    <p id="battery-voltage">Loading...</p>
 
-    <!-- 라인트레이싱 제어 버튼 -->
-    <h2>Line Tracing Control</h2>
-    <button onclick="toggleLineTracing()">Toggle Line Tracing</button>
-
+    <!-- 라인트레이싱 제어 -->
+    <script src="line_tracing_control.js"></script>
     <!-- 모터 제어 명령어 -->
     <script src="motor_control.js"></script>
     <!-- 부저 제어 명령어 -->
-    <script src="buzzer_control.js"></script>
-    <!-- 라인트레이싱 제어 -->
-    <script src="line_tracing_control.js"></script>
+    <script src="buzzer_control.js"></script>   
 </body>
 </html>

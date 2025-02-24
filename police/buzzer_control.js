@@ -1,22 +1,56 @@
-// buzzer_control.js
-console.log("Buzzer Control using ROS IP:", window.ros_ip);  // 이미 설정된 IP를 직접 사용
-// ROS ServiceClient 설정
-var buzzerControlClient = new ROSLIB.Service({
-    ros: ros_pub,
-    name: "/Buzzer",
-    serviceType: "std_srvs/Trigger"  // 부저를 켜고 끄는 서비스 타입 (트리거 서비스)
+// ROS 연결을 위한 WebSocket 설정
+const ros_buz = new ROSLIB.Ros({
+    url: `ws://${window.ROBOT_IP}:9090`  // WebSocket 주소 사용
 });
 
-// 부저 제어 함수
+// WebSocket 연결 시 상태 출력
+ros_buz.on('connection', function() {
+    console.log('[Publisher] Connected to ROS server');
+});
+
+// WebSocket 연결 종료 시 상태 출력
+ros_buz.on('close', function() {
+    console.log('[Publisher] Connection closed');
+});
+
+// 부저 제어 서비스 객체 생성
+const buzzerService = new ROSLIB.Service({
+    ros: ros_buz,
+    name: BUZZER_SERVICE,  // 부저 서비스 이름
+    serviceType: 'jetbotmini_msgs/Buzzer'  // 부저 서비스 타입
+});
+
+// 부저 제어 함수 (1: 켜기, 0: 끄기)
 function controlBuzzer(state) {
-    var request = new ROSLIB.ServiceRequest({
-        data: state  // 1이면 부저 켜기, 0이면 부저 끄기
+    const request = new ROSLIB.ServiceRequest({
+        buzzer: state  // 'buzzer' 필드를 사용
     });
 
-    buzzerControlClient.callService(request, function(result) {
-        console.log("Result from service call:", result.success ? "Success" : "Failure");
-        document.getElementById("currentCommand").innerText = state === 1 ? "Buzzer ON" : "Buzzer OFF";
+    buzzerService.callService(request, function(response) {
+        if (response.result) {
+            console.log('Buzzer response:', response);
+            updateBuzzerStatus(state);  // 상태 업데이트
+        } else {
+            console.log('Buzzer control failed');
+            updateBuzzerStatus(null);  // 실패 시 상태 갱신
+        }
     });
-
-    console.log("Buzzer control state:", state === 1 ? "ON" : "OFF");
 }
+
+// 부저 상태 업데이트 함수
+function updateBuzzerStatus(state) {
+    const buzzerStatusElement = document.getElementById("buzzer-status");
+
+    if (state === 1) {
+        buzzerStatusElement.textContent = "Buzzer is ON";
+    } else if (state === 0) {
+        buzzerStatusElement.textContent = "Buzzer is OFF";
+    } else {
+        buzzerStatusElement.textContent = "Failed to control Buzzer";
+    }
+}
+
+// 부저 상태 표시 요소 생성
+const buzzerStatusElement = document.createElement("p");
+buzzerStatusElement.id = "buzzer-status";
+document.body.appendChild(buzzerStatusElement);
