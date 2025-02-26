@@ -7,7 +7,6 @@ import numpy as np
 from time import sleep
 from jetbotmini_msgs.srv import *
 from jetbotmini_msgs.msg import *
-import threading
 
 # I2C 버스 초기화 (Raspberry Pi에서 I2C 통신을 위한 설정)
 bus = smbus.SMBus(1)
@@ -46,13 +45,14 @@ def gstreamer_pipeline(
 class RosDriver:
     def __init__(self):
         # ROS 서비스 및 퍼블리셔 초기화
-        self.srv_set_auto = rospy.Service("/SetAuto", SetAuto, self.SetAuto)  # Add service
+        self.srv_set_auto = rospy.Service("/SetAuto", SetAuto, self.SetAuto)
         self.srv_Buzzer = rospy.Service("/Buzzer", Buzzer, self.Buzzercallback)
         self.motorcontrol = rospy.Service("/MotorControl", MotorControl, self.Motorcontrol)
         self.volPublisher = rospy.Publisher("/voltage", Battery, queue_size=10)
         # 로봇 동작 관련 속성 (속도, 회전)
         self.SPEED_VALUE = 0.4  # 상수로 정의된 속도
-        self.TURN_VALUE = 0.25   # 상수로 정의된 회전값
+        self.TURN_VALUE = 0.2   # 상수로 정의된 회전값
+        self.speed = 0.4
         # 라인 트레이싱 관련 HSV 색상 범위
         self.Hmin = 100
         self.Smin = 43
@@ -65,7 +65,11 @@ class RosDriver:
         # 자동 라인 추적 활성화 여부
         self.set_auto = False  # 초기값: 0 (자동 조작 비활성화)
         # 배터리 전압을 주기적으로 퍼블리시하기 위한 Timer 설정
-        self.timer = rospy.Timer(rospy.Duration(30), self.battery_callback)
+        self.timer = rospy.Timer(rospy.Duration(20), self.battery_callback)
+        self.siren_active = False  # 사이렌 활성화 여부
+
+        # 타이머 초기화 (주기적으로 부저를 울리기)
+        self.siren_timer = None
         # 카메라 관련 속성
         self.capture = cv.VideoCapture(gstreamer_pipeline(flip_method=0), cv.CAP_GSTREAMER)
         if not self.capture.isOpened():
@@ -80,14 +84,6 @@ class RosDriver:
         battery = Battery()
         battery.Voltage = voltage
         self.volPublisher.publish(battery)
-        # if voltage >= 12.6:
-        #     rospy.loginfo("Battery voltage is at full charge: %.2f V", voltage)
-        # elif voltage >= 10.0:
-        #     rospy.loginfo("Battery voltage is normal: %.2f V", voltage)
-        # elif voltage >= 9.6:
-        #     rospy.logwarn("Battery voltage is low: %.2f V", voltage)
-        # else:
-        #     rospy.logerr("Battery voltage is critically low: %.2f V", voltage)
         
     # 자동주행 ON/OFF
     def SetAuto(self, request):
@@ -103,12 +99,6 @@ class RosDriver:
             self.stop_motors()
             rospy.loginfo("set_auto set to 0 (라인트레이싱 비활성화)")
         return True
-
-    def cancel(self):
-        self.srv_Buzzer.shutdown()
-        self.volPublisher.unregister()
-        rospy.loginfo("Closing the robot...")
-        rospy.sleep(1)
     
     #모터 정지
     def stop_motors(self):
@@ -119,45 +109,86 @@ class RosDriver:
         rospy.loginfo("Motors stopped.")
         self.is_motor_stopped = True  # 모터가 멈췄다고 상태 업데이트
 
-    #부져 서비스하는 함수    
+    def start_siren(self, event):
+        """사이렌을 0.5초 간격으로 울리기"""
+        if self.siren_active:
+            bus.write_byte_data(ADDRESS, 0x06, 1)  # 부저 ON
+            sleep(0.5)
+            bus.write_byte_data(ADDRESS, 0x06, 0)  # 부저 OFF
+            sleep(0.5)
+
     def Buzzercallback(self, request):
-        if not isinstance(request, BuzzerRequest): return
-        bus.write_byte_data(ADDRESS, 0x06, request.buzzer)
-        sleep(0.01)
-        bus.write_byte_data(ADDRESS, 0x06, request.buzzer)
+        """부저 제어 서비스 (기본 ON/OFF + 사이렌 모드 통합)"""
+        if not isinstance(request, BuzzerRequest):
+            return BuzzerResponse(result=False)
+
+        if request.buzzer == 1:  # 부저 ON 또는 사이렌 모드
+            self.siren_active = True  # 사이렌 모드 활성화
+            # 타이머 시작
+            if self.siren_timer is None:
+                self.siren_timer = rospy.Timer(rospy.Duration(1), self.start_siren, oneshot=False)  # 주기적으로 호출
+            bus.write_byte_data(ADDRESS, 0x06, 1)  # 부저 ON
+        elif request.buzzer == 0:  # 부저 OFF
+            self.siren_active = False  # 사이렌 모드 중지
+            if self.siren_timer is not None:
+                self.siren_timer.shutdown()  # 타이머 중지
+                self.siren_timer = None
+            bus.write_byte_data(ADDRESS, 0x06, 0)  # 부저 OFF
+        else:
+            return BuzzerResponse(result=False)
+
         return BuzzerResponse(result=True)
-    
+
     #수동 모터 조작 서비스하는 함수
     def Motorcontrol(self, request):
+        print(request)
+
         if self.set_auto:
             rospy.loginfo("Automatic mode is active. Ignoring motor control request.")
             return False
-        # 수동 조작시 초기값
-        speed = 0.4
-        leftdir, rightdir = 1, 1
+
+        # 수동 조작 시 초기값을 설정 (self.SPEED_VALUE 사용)
+        leftdir, rightdir = 1, 1  # 기본적으로 전진 방향
+
         # Command에 따른 모터 조작
         if request.command == "forward":
+            self.is_motor_stopped = False
             leftdir = rightdir = 1
         elif request.command == "backward":
+            self.is_motor_stopped = False
             leftdir = rightdir = 0
         elif request.command == "left":
+            self.is_motor_stopped = False
             leftdir = 0
             rightdir = 1
         elif request.command == "right":
+            self.is_motor_stopped = False
             leftdir = 1
             rightdir = 0
         elif request.command == "stop":
-            speed = 0
+            self.stop_motors()  # stop 명령이 들어오면 모터를 멈추고 상태 업데이트
+            self.speed = 0  # 모터가 멈추면 속도 0으로 설정
+
+                # 속도 변경 명령 처리
         elif "speed" in request.command:
-            speed = {"fast": 0.8, "slow": 0.3, "normal": 0.5}.get(request.command.split()[-1], 0.5)
+            # 기존 speed 값을 새로운 speed로 변경
+            new_speed = {"fast": 0.8, "slow": 0.3, "normal": self.SPEED_VALUE}.get(
+                request.command.split()[-1], self.SPEED_VALUE
+            )
+            if new_speed != self.speed:  # 새 속도가 기존 속도와 다를 때만 변경
+                self.speed = new_speed
+                rospy.loginfo("Speed changed to %f", self.speed)
 
         try:
-            bus.write_i2c_block_data(ADDRESS, 0x01, [leftdir, int(speed * 255), rightdir, int(speed * 255)])
-            sleep(0.01)
-            bus.write_i2c_block_data(ADDRESS, 0x01, [leftdir, int(speed * 255), rightdir, int(speed * 255)])
-            rospy.loginfo("Motor control successful.")
+            if not self.is_motor_stopped:
+                bus.write_i2c_block_data(ADDRESS, 0x01, [leftdir, int(self.speed * 255), rightdir, int(self.speed * 255)])
+                sleep(0.01)
+                bus.write_i2c_block_data(ADDRESS, 0x01, [leftdir, int(self.speed * 255), rightdir, int(self.speed * 255)])
+                rospy.loginfo("Motor speed: %f.", self.speed)
+            else:
+                rospy.loginfo("Motor is stopped. Speed : %f", self.speed)
+
             return True
-        
         except Exception as e:
             rospy.logerr("Motor control failed: %s", e)
             return False
