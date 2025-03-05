@@ -12,7 +12,7 @@
     <script src="battery_control.js"></script>
 </head>
 <body>
-    <img id="camera-feed" src="http://192.168.137.88:8080/stream?topic=/usb_cam/image_raw" width="640" height="360" alt="Live Stream" />
+    <img id="camera-feed" src="http://192.168.137.26:8080/stream?topic=/usb_cam/image_raw" width="640" height="360" alt="Live Stream" />
 
     <h1>ROS Robot Control</h1>
     <!-- 배터리 전압 -->
@@ -22,7 +22,6 @@
     <!-- 라인트레이싱 제어 버튼 -->
     <h2>Line Tracing Control</h2>
     <button id="toggleButton">Start Line Tracing</button>
-
 
     <!-- 모터 제어 버튼 -->
     <h1>Motor Control</h1>
@@ -39,16 +38,18 @@
 
     
     <!-- 부저 제어 버튼 -->
-    <p id="buzzer-status">Buzzer status: OFF</p>
-
-    <!-- 부저 상태 토글 버튼 -->
-    <button onclick="toggleBuzzer()">Toggle Buzzer</button> <!-- 토글 버튼 -->
+    <h2>Buzzer Control</h2>
+    <button onclick="toggleBuzzer()">Buzzer Toggle</button>
+    `
 
     <!-- 라인트레이싱 제어 -->
     <script src="line_tracing_control.js"></script>
     <!-- 모터 제어 명령어 -->
     <script src="motor_control.js"></script>
     <!-- 부저 제어 명령어 -->
-    <script src="buzzer_control.js"></script>   
+    <script src="buzzer_control.js"></script>  
+    <!-- <script src="camera_stream.js"></script>   -->
+
 </body>
 </html>
+

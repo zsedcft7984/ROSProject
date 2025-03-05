@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROS Line Tracing Control</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/roslibjs/1.1.0/roslib.min.js"></script>
+
+    <!-- 전압 정보 수신 (초기 실행이 필요하므로 head에 배치) -->
+    <script>
+        // 차량의 IP 주소 설정
+        var robotIP = '192.168.137.54';  // 차량 IP 주소 (예시로 사용, 실제 IP로 변경 필요)
+        var ros = new ROSLIB.Ros({
+            url: 'ws://' + robotIP + ':9090'  // ROSBridge WebSocket URL
+        });
+
+        ros.on('connection', function() {
+            console.log('Connected to ROSBridge WebSocket');
+        });
+
+        ros.on('error', function(error) {
+            console.log('Error connecting to ROSBridge:', error);
+        });
+
+        ros.on('close', function() {
+            console.log('Connection to ROSBridge closed');
+        });
+
+        // 라인트레이싱 시작/중지 명령 전송 함수
+        function sendLineTracingCommand(command) {
+            var commandMsg = new ROSLIB.Message({
+                data: command
+            });
+
+            var commandPublisher = new ROSLIB.Topic({
+                ros: ros,
+                name: '/robot/command/line_tracing',  // 라인트레이싱 명령을 보내는 ROS Topic
+                messageType: 'std_msgs/String'
+            });
+
+            commandPublisher.publish(commandMsg);
+            console.log('Sent command:', command);
+        }
+    </script>
+</head>
+<body>
+    <h1>ROS Line Tracing Control</h1>
+
+    <!-- 라인트레이싱 명령 버튼 -->
+    <button id="startLineTracing">라인 트레이싱 시작</button>
+    <button id="stopLineTracing">라인 트레이싱 중지</button>
+
+    <script>
+        // 버튼 클릭 이벤트 설정
+        document.getElementById('startLineTracing').addEventListener('click', function() {
+            sendLineTracingCommand('start_line_tracing');
+        });
+
+        document.getElementById('stopLineTracing').addEventListener('click', function() {
+            sendLineTracingCommand('stop_line_tracing');
+        });
+    </script>
+</body>
+</html>

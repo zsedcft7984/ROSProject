@@ -1,0 +1,5 @@
+1. MotorControl 만들고
+2. SetAuto 하나만들고
+3. py 신규등록 하는거 해
+4. rosbridge 설치
+5. usb yuyv 수정 video1로 수정
