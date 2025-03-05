@@ -49,3 +49,27 @@ ros 에서 usb 웹캠을통해 영상을 전달 -> 학습된 모델에 적용 ->
 수동 조작 버튼 클릭시 rosbridge에 오류메시지가 뜸 전체적인 장치 구동에는 문제가 되지 않는데 일단 오류 이므로 해결해야할듯
 예상하는 이유는 service의 경우 Response가 있어 return을 해줘야 하는 상황에서 새로운 서비스를 만들어 동작을 하다보니 Response를
 따로 정의하지 않았음 그래서 그냥 결과가 boolean 값이므로 return True 로 쓰며 넘겨놨는데 이게 문제가 된듯싶음
+
+02/27
+
+수동조작 관련
+: 수동조작시 rosbridge 터미널에 예상하지 못한 오류가 발생했는데 우선 해결해 두었으나 정확한 이유를 특정할 수 없다.
+우선 해결한 방법은 ros에서 서비스 build시 자동으로  workspace/catkin_ws/devel/lib/python2.7/dist-packages/jetbotmini_msgs/srv 에 _서비스이름.py 파일이 생성되고
+이 파일에 서비스이름Request, Response 등 이 자동으로 생성되게 된다. 그래서 파일을 확인해보니 Response쪽에 이상이 있었는데
+Response가 어떠한 값도 받지 않는 다는걸 알게 되었고 따라서 함수의 return 값을
+retrun MotorControlResponse() 로 ()를 빈칸으로 설정하니 해결됨
+이 오류가 생긴 이유는 추측으로 초기화된 ros를 복구하던 중  srv 파일을 만들때 
+#request 
+---
+#response 
+위와 같은 형식으로 만들어야 했는데
+#request
+
+#response
+로 만들어서 그렇게 된것이라고 추측중이다.
+
+02/28
+ros 코드 간단한 수정 및
+yolo 모델을 ros 차량에서 전송받은 영상을 받아서 적용 시키는 것
+상용한 방법은 websoket을 생성하여 ros 의 websoket과 연동하여 정보를 주고받게 하는것
+연결이 원하하게 되지않음
