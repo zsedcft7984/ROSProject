@@ -19,9 +19,6 @@ ros = roslibpy.Ros(host='192.168.137.26', port=9090)
 ros.run()  # ROS에 연결
 print("Connected to ROS")
 
-# ROS 토픽 생성 (예: /yolo_detection_results)
-yolo_topic = roslibpy.Topic(ros, '/yolo_detection_results', 'std_msgs/String')
-
 # 부저 제어 서비스 연결 (예: /buzzer_service)
 buzzer_service = roslibpy.Service(ros, '/Buzzer', 'jetbotmini_msgs/Buzzer')  # 서비스 이름과 타입에 맞게 수정
 
@@ -33,12 +30,17 @@ frame_interval = 20
 
 def save_image(frame, label, order):
     """이미지를 라벨, 순서, 저장된 시간으로 파일로 저장하는 함수"""
-    current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    if not os.path.exists("saved_images"):
-        os.makedirs("saved_images")
-    filename = f"saved_images/{label.replace(' ', '_')}-{order}-{current_time}.jpg"
+    current_time = datetime.datetime.now().strftime("%YY-%mM-%dD_%H:%M:%S")  # 날짜 및 시간 형식 조정
+    save_dir = "saved_images"
+
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    # 파일명: "knife_1_2025Y-03M-06D_15:30:00.jpg"
+    filename = f"{save_dir}/{label}_{order}_{current_time}.jpg"
     cv2.imwrite(filename, frame)
-    print(f"Image saved as {filename}")
+    print(f"Image saved: {filename}")
+
 
 def call_buzzer_service(state):
     """부저 제어 서비스 호출 (1: ON, 0: OFF)"""
@@ -72,8 +74,6 @@ def detection_loop():
             frame_count += 1
             if frame_count % frame_interval == 0:  # 지정된 프레임마다 객체 감지
                 results = model(frame)
-                detection_happened = False
-                detected_objects = []
 
                 for result in results:
                     boxes = result.boxes
@@ -81,13 +81,11 @@ def detection_loop():
                         cls = int(box.cls)
                         conf = float(box.conf)
                         x1, y1, x2, y2 = map(int, box.xyxy[0])
-                        if conf > 0.8:  # 신뢰도 0.7 이상인 경우만 처리
+                        if conf > 0.8:  # 신뢰도 0.8 이상인 경우만 처리
                             label = f"{class_names[cls]} ({conf * 100:.1f}%)"
                             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                             cv2.putText(frame, label, (x1, y1 - 10),
                                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                            detection_happened = True
-                            detected_objects.append(label)
 
                             # 신뢰도가 0.9 이상이고, 클래스가 'knife'인 경우 부저 제어 (중복 작동 방지)
                             if class_names[cls] == "knife":
@@ -100,15 +98,9 @@ def detection_loop():
 
                                     # 부저 ON
                                     call_buzzer_service(1)
-                                    # 5초 후 부저 OFF (여기서 time.sleep는 감지 루프를 잠시 멈춤)
+                                    # 5초 후 부저 OFF
                                     time.sleep(5)
                                     call_buzzer_service(0)
-
-                # ROS 토픽으로 감지 결과 전송
-                if detection_happened:
-                    detection_message = ', '.join(detected_objects)
-                    message = roslibpy.Message({'data': detection_message})
-                    yolo_topic.publish(message)
 
                 # 결과 프레임 화면에 표시
                 cv2.imshow("YOLO Object Detection", frame)

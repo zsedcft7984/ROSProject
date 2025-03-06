@@ -1,0 +1,22 @@
+roslibpy를 사용하면 Python 파일에서 ros에 접근하여 서비스와 토픽을 접근하는 것이 가능하다
+우선 roslibpy를 install 해줌
+pip install roslibpy
+
+그다음 ros와 연결해줌
+ros = roslibpy.Ros(host='ros 주소', port=9090)
+ros.run()  # ROS에 연결
+
+연결했다면 ros에 있는 서비스를 불러와줌( 기존에 서비스를 불러오는 js파일참고)
+
+buzzer_service = roslibpy.Service(ros, '/Buzzer', 'jetbotmini_msgs/Buzzer') 
+
+이제 이 서비스를 조건이 만족할때 호출하면 해결됨됨
+
+if 조건 
+    # 부저 ON
+    call_buzzer_service(1)
+    # 5초 후 부저 OFF
+    time.sleep(5)
+    call_buzzer_service(0)
+
+이런느낌으로로
