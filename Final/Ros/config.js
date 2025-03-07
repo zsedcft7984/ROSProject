@@ -12,8 +12,7 @@ const MOTOR_CONTROL_SERVICE = '/MotorControl';  // 모터 제어 서비스
 const BUZZER_SERVICE = '/Buzzer';  // 부저 제어 서비스 (서비스 이름만 사용)
 const BATTERY_TOPIC = '/voltage';  // 배터리 상태 토픽 (네임스페이스 제거)
 
-// 배터리 관련 변수 (배터리 상태 토픽의 기본 값)
-const DEFAULT_BATTERY_VOLTAGE = 0.0;
+
 
 // 라인트레이싱 제어 서비스
 const LINE_TRACING_SERVICE = '/SetAuto';  // 라인트레이싱 제어 서비스 (네임스페이스 제거)
@@ -24,6 +23,5 @@ window.ROSCAR_WS_URL = ROSCAR_WS_URL;
 window.MOTOR_CONTROL_SERVICE = MOTOR_CONTROL_SERVICE;
 window.BUZZER_SERVICE = BUZZER_SERVICE;  // 수정된 BUZZER_SERVICE 값 반영
 window.BATTERY_TOPIC = BATTERY_TOPIC;
-window.DEFAULT_BATTERY_VOLTAGE = DEFAULT_BATTERY_VOLTAGE;
 window.LINE_TRACING_SERVICE = LINE_TRACING_SERVICE;  
 window.STREAM_URL = STREAM_URL;
