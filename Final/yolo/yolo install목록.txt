@@ -1,0 +1,8 @@
+pip install roslibpy opencv-python numpy ultralytics requests
+<<<<<<< HEAD
+
+
+python -m pip install -r .\Final\yolo\requirements.txt
+requirements.txt 가있는 상대경로로 써줘야 작동함
+=======
+>>>>>>> 29b853930d0c3cc726cf77d34c9e1c71a41bb810

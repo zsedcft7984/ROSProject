@@ -30,13 +30,21 @@ frame_interval = 20
 
 def save_image(frame, label, order):
     """이미지를 라벨, 순서, 저장된 시간으로 파일로 저장하는 함수"""
-    current_time = datetime.datetime.now().strftime("%YY-%mM-%dD_%H:%M:%S")  # 날짜 및 시간 형식 조정
+<<<<<<< HEAD
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M")  # 날짜 및 시간 형식 조정
+=======
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")  # 날짜 및 시간 형식 조정
+>>>>>>> 29b853930d0c3cc726cf77d34c9e1c71a41bb810
     save_dir = "saved_images"
 
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 
-    # 파일명: "knife_1_2025Y-03M-06D_15:30:00.jpg"
+<<<<<<< HEAD
+    # 파일명: "knife_1_2025-03-06_15:30.jpg"
+=======
+    # 파일명: "knife_1_2025-03-06_15:30:00.jpg"
+>>>>>>> 29b853930d0c3cc726cf77d34c9e1c71a41bb810
     filename = f"{save_dir}/{label}_{order}_{current_time}.jpg"
     cv2.imwrite(filename, frame)
     print(f"Image saved: {filename}")
