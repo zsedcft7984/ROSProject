@@ -11,40 +11,21 @@
 - **웹페이지와 연계**: 웹페이지에서 ROS의 동작을 Service와 Topic을 사용하여 제어하거나 특정 동작을 수행하도록 명령할 수 있습니다.
 - **아두이노 동작**: Wi-Fi로 연결된 아두이노가 PC에서 명령을 받아 동작하고, 동작 결과를 다시 PC로 전송합니다.
 
-## 설치 및 실행 방법
-### 설치 조건 
-ROS
+## 환경 설정 방법
+### ROS
 - ROS Melodic 버전을 사용하는 보드(Jetson nano 4GB)를 기반으로 합니다.
 - http://www.yahboom.net/study/JETBOT-mini 에서 Download 에 Jetbot MINI image 4GB를 다운받아서 balenaEtcher을 통해 파일을 적용시킨 USB가 필요합니다(32GB 이상)
 - ROS 동작에 관한 추가적인 사항은 Tip 폴더의 내용을 참고하세요 
 
-Arduino
+### Arduino
 - 사용하는 보드는 아두이노 우노+WIFI D1 R1 보드(ESP8266)를 사용합니다.
 - 아두이노 환경설정 - 추가 보드메니져 URL 에다가 https://arduino.esp8266.com/stable/package_esp8266com_index.json 를 입력하여 다운 받습니다.
 - 사용하는 포트의 보드설정에  LOLIN(WeMos) D1 R1 를 선택하여 사용합니다.
 
-YOLO
+### YOLO
 - Visual Studio Code를 사용해서 편집했습니다.
 - yolo 폴더 내부에 istall목록.txt 참고하면 됩니다.
-  
-1. **프로젝트 클론**
 
-   ```bash
-   git clone https://github.com/zsedcft7984/ROSProject.git
-   ```
-
-2. **워크스페이스 설정**
-
-   ```bash
-   cd ROSProject/Final
-   catkin_make
-   ```
-
-3. **환경 설정**
-
-   ```bash
-   source devel/setup.bash
-   ```
 
 ## 개인 프로젝트 기여
 
