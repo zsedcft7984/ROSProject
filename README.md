@@ -12,7 +12,21 @@
 - **아두이노 동작**: Wi-Fi로 연결된 아두이노가 PC에서 명령을 받아 동작하고, 동작 결과를 다시 PC로 전송합니다.
 
 ## 설치 및 실행 방법
+### 설치 조건 
+ROS
+- ROS Melodic 버전을 사용하는 보드(Jetson nano 4GB)를 기반으로 합니다.
+- http://www.yahboom.net/study/JETBOT-mini 에서 Download 에 Jetbot MINI image 4GB를 다운받아서 balenaEtcher을 통해 파일을 적용시킨 USB가 필요합니다(32GB 이상)
+- ROS 동작에 관한 추가적인 사항은 Tip 폴더의 내용을 참고하세요 
 
+Arduino
+- 사용하는 보드는 아두이노 우노+WIFI D1 R1 보드(ESP8266)를 사용합니다.
+- 아두이노 환경설정 - 추가 보드메니져 URL 에다가 https://arduino.esp8266.com/stable/package_esp8266com_index.json 를 입력하여 다운 받습니다.
+- 사용하는 포트의 보드설정에  LOLIN(WeMos) D1 R1 를 선택하여 사용합니다.
+
+YOLO
+- Visual Studio Code를 사용해서 편집했습니다.
+- yolo 폴더 내부에 istall목록.txt 참고하면 됩니다.
+  
 1. **프로젝트 클론**
 
    ```bash
@@ -35,7 +49,7 @@
 ## 개인 프로젝트 기여
 
 ### 1. ROS
-- ROS 장치는 Yahboom 회사에서 제공하는 Jetbot Mini를 사용합니다. ROS Melodic 버전을 사용하는 보드를 기반으로 합니다.
+- ROS 장치는 Yahboom 회사에서 제공하는 Jetbot Mini를 사용합니다. 
 - 장치에는 자체 카메라, DC 모터, 부저, LED 등이 제공됩니다. 프로젝트에서는 추가적으로 웹캠을 부착하여 동작합니다.
 - jetbotmini_driver.py에서 ROS의 다양한 기능을 동작하게 하는 서비스와 토픽이 정의되어 있습니다.
 - 제공하는 기능은 Auto mode on/off, Motor 제어, 부져 제어, 베터리 정보 제공 이 있습니다.
@@ -54,7 +68,7 @@
     </tr>
     <tr>
         <td><b>Auto Mode</b></td>
-        <td>`SetAuto.srv`</td>
+        <td>`/SetAuto`</td>
         <td>자율 주행 모드를 활성화/비활성화합니다.</td>
     </tr>
     <tr>
@@ -64,12 +78,12 @@
     </tr>
     <tr>
         <td><b>부저 제어</b></td>
-        <td>`Buzzer.srv`</td>
+        <td>`/Buzzer`</td>
         <td>부저를 켜거나 끌 수 있습니다.</td>
     </tr>
     <tr>
         <td><b>배터리 정보 제공</b></td>
-        <td>`Battery.msg`</td>
+        <td>`/voltage`</td>
         <td>현재 배터리 상태를 확인합니다.</td>
     </tr>
 </table>
